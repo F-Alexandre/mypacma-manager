@@ -9,15 +9,18 @@
 #include<curl/curl.h>
 
 
+
 //funcao principal para extrair o arquivo .pkg.tar.zst
 int extrair_pacote(const char *caminho_pacote);
 
 //funcao para auxiliar para escrever os dados recebidos da internet
 //diretamente no arquivo em disco
-size_t callback_escrita(void *ptr, size_t size , size_t nmemb, FILE *stream);
+size_t callback_escrita(void *ptr, size_t size , size_t nmemb, FILE *stream){
+        return fwrite(ptr,size, nmemb, stream);
+}
 
 //funcao para baixar arquivos
-int baixa_arquivo(cont char *url,const char *caminho_destino);
+int baixa_arquivo(const char *url,const char *caminho_destino);
 
 /*MAIN*/
 int main(int argc , char **argv){
@@ -34,7 +37,7 @@ int main(int argc , char **argv){
   if(strncmp(argv[1], "-Syy",10)==0){
     const char *url_db = "https://kernel.org";
     const char *destino = "core.db.tar.zst";
-    return baixa_arquivo(url_db,destino);
+     return baixa_arquivo(url_db,destino);
   }else if(strncmp(argv[1], "-U",10)== 0){
       if(argc < 3){
         printf("Erro: Informe o caminho do pacote .pkg.tar.zst\n");
@@ -118,7 +121,7 @@ int extrair_pacote(const char *caminho_pacote){
                 fprintf(stderr,"[-] ERRO AO LER DADOS DO PACOTE: %s\n",archive_error_string(a));
             return 1;
             }
-
+        baixa_arquivo;
 
         }
 
@@ -133,16 +136,9 @@ int extrair_pacote(const char *caminho_pacote){
    printf("[+] Instalacao dos arquivos concluida com sucesso\n");
 }
 
-/***/
-size_t callback_escrita(void *ptr, size_t size , size_t nmemb, FILE *stream){
-
-   size_t escrita = fwrite(ptr,size, nmemb, stream);
-   return escrita;
-
-}
 
 /***/
-int baixa_arquivo(cont char *url,const char *caminho_destino){
+int baixa_arquivo(const char *url,const char *caminho_destino){
 
     CURL *curl;
     CURLcode res;
@@ -156,7 +152,7 @@ int baixa_arquivo(cont char *url,const char *caminho_destino){
         return 1;
     }
 
-    arquivo = fopen(caminho_destino, wb);
+    arquivo = fopen(caminho_destino, "wb");
 
     if(!arquivo){
         fprintf(stderr, "[-]ERRO AO CRIAR O CAMINHO DE DESTINO: %s\n", caminho_destino);
@@ -169,8 +165,8 @@ int baixa_arquivo(cont char *url,const char *caminho_destino){
     printf("DESTINO: %s\n" , caminho_destino);
 
     //configura as opcaoes da requisicao HTTP
-    curl_easy_setopt(curl, CURLOPT,url);
-    curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,callback_escrita());
+    curl_easy_setopt(curl,CURLOPT_URL,url);
+    curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,callback_escrita);
     curl_easy_setopt(curl,CURLOPT_WRITEDATA, arquivo);
 
 

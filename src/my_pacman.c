@@ -34,11 +34,11 @@ int main(int argc , char **argv){
   }
 
 
-  if(strncmp(argv[1], "-Syy",10)==0){
+  if(strncmp(argv[1], "-Syy",5)==0){
     const char *url_db = "https://kernel.org";
     const char *destino = "core.db.tar.zst";
      return baixa_arquivo(url_db,destino);
-  }else if(strncmp(argv[1], "-U",10)== 0){
+  }else if(strncmp(argv[1], "-U",5)== 0){
       if(argc < 3){
         printf("Erro: Informe o caminho do pacote .pkg.tar.zst\n");
         return 1;
@@ -112,7 +112,7 @@ int extrair_pacote(const char *caminho_pacote){
 
             while((r = archive_read_data_block(a,&buff,&size , &offset))==ARCHIVE_OK){
                 int r2 = archive_write_data_block(ext,buff,size,offset);
-                if(r< ARCHIVE_OK){
+                if(r2 < ARCHIVE_OK){
                     fprintf(stderr, "[-]ERRO AO EXECUTAR DADOS: %s\n", archive_error_string(ext));
             return 1;
           }

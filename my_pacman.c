@@ -6,26 +6,49 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<string.h>
+#include<curl/curl.h>
 
 
-
+//funcao principal para extrair o arquivo .pkg.tar.zst
 int extrair_pacote(const char *caminho_pacote);
 
+//funcao para auxiliar para escrever os dados recebidos da internet
+//diretamente no arquivo em disco
+size_t callback_escrita(void *ptr, size_t size , size_t nmemb, FILE *stream);
+
+//funcao para baixar arquivos
+int baixa_arquivo(cont char *url,const char *caminho_destino);
+
+/*MAIN*/
 int main(int argc , char **argv){
 
 
-    if(argc < 3 || strncmp(argv[1], "-U",1000) !=0)
-    {
-      printf("USO: %s -U <caminho_do_pacote.pkg.tar.zst>", argv[0]);
-      return 1;
-    }
+  if(argc < 2){
+    printf("Uso do Pac:\n");
+    printf(" %s -Syy  ",argv[0]);
+    printf(" %s -U <pacote.zst> ",argv[0]);
+  return 1;
+  }
 
 
- return extrair_pacote(argv[2]);
+  if(strncmp(argv[1], "-Syy",10)==0){
+    const char *url_db = "https://kernel.org";
+    const char *destino = "core.db.tar.zst";
+    return baixa_arquivo(url_db,destino);
+  }else if(strncmp(argv[1], "-U",10)== 0){
+      if(argc < 3){
+        printf("Erro: Informe o caminho do pacote .pkg.tar.zst\n");
+        return 1;
+      }
+       return extrair_pacote(argv[2]);
 
+  }
+    printf("[-] COMANDO INVALIDO");
+
+    return 1;
 }
 
-//funcao principal para extrair o arquivo .pkg.tar.zst
+/****/
 int extrair_pacote(const char *caminho_pacote){
   struct archive * a;
   struct archive *ext;
@@ -109,5 +132,77 @@ int extrair_pacote(const char *caminho_pacote){
 
    printf("[+] Instalacao dos arquivos concluida com sucesso\n");
 }
+
+/***/
+size_t callback_escrita(void *ptr, size_t size , size_t nmemb, FILE *stream){
+
+   size_t escrita = fwrite(ptr,size, nmemb, stream);
+   return escrita;
+
+}
+
+/***/
+int baixa_arquivo(cont char *url,const char *caminho_destino){
+
+    CURL *curl;
+    CURLcode res;
+    FILE *arquivo;
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+    curl = curl_easy_init();
+
+    if(!curl){
+        fprintf(stderr, "[-]ERRO AO INICIALIZAR A LIBCURL.\n");
+        return 1;
+    }
+
+    arquivo = fopen(caminho_destino, wb);
+
+    if(!arquivo){
+        fprintf(stderr, "[-]ERRO AO CRIAR O CAMINHO DE DESTINO: %s\n", caminho_destino);
+        curl_easy_cleanup(curl);
+        return 1;
+    }
+
+    printf("[*]INICIANDO DOWNLOAD......\n");
+    printf("ORIGEM: %s\n",url);
+    printf("DESTINO: %s\n" , caminho_destino);
+
+    //configura as opcaoes da requisicao HTTP
+    curl_easy_setopt(curl, CURLOPT,url);
+    curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,callback_escrita());
+    curl_easy_setopt(curl,CURLOPT_WRITEDATA, arquivo);
+
+
+    //seguir redirecionamento HTTP
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION,1L);
+
+    //define um agente de usuario para evitar bloqueios de servidores
+    curl_easy_setopt(curl,CURLOPT_USERAGENT, "ProtoPac-Manager/0.1");
+
+    //executa o download sincrona
+    res= curl_easy_perform(curl);
+
+    fclose(arquivo);
+
+    if(res != CURLE_OK){
+        fprintf(stderr,"[-] FALHA NO DOWNLOAD :(%s\n", curl_easy_strerror(res));
+        //remove o arquivo corrompido
+        remove(caminho_destino);
+        curl_easy_cleanup(curl);
+        curl_global_cleanup();
+        return 1;
+    }
+
+    printf("[+]DOWNLOAD CONCLUIDO COM SUCESSO :)");
+
+    curl_easy_cleanup(curl);
+    curl_global_cleanup();
+
+    return 0;
+}
+
+
+
 
 
